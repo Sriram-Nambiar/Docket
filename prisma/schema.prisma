@@ -1,0 +1,77 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  founder
+  compliance_head
+}
+
+enum Status {
+  NotStarted
+  EvidenceUploaded
+  FiledVerified
+  Overdue
+}
+
+model User {
+  id          String   @id @default(uuid())
+  email       String   @unique
+  name        String
+  role        Role     @default(founder)
+  avatar      String?  @default("U")
+  defaultView String?  @default("intake")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tasks       Task[]
+}
+
+model Task {
+  id             String   @id @default(uuid())
+  title          String
+  category       String
+  entity         String   @default("Apex Technologies Pvt Ltd")
+  section        String?
+  act            String?
+  dueDate        String
+  status         Status   @default(NotStarted)
+  accruedPenalty Int      @default(0)
+  dailyRate      Int      @default(0)
+  whatsappAlert  Boolean  @default(true)
+  evidenceUrl    String?
+  verifiedBy     String?
+  userId         String?
+  user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  actor     String
+  avatar    String   @default("WA")
+  action    String
+  target    String
+  status    String   @default("Amber")
+  hash      String
+  timestamp String
+  createdAt DateTime @default(now())
+}
+
+model StatutoryRule {
+  id             String  @id @default(uuid())
+  ruleCode       String  @unique
+  title          String
+  act            String
+  section        String
+  fixedFee       Int     @default(0)
+  dailyRate      Int     @default(0)
+  statute        String
+  description    String?
+  escalationDays Int     @default(30)
+}
