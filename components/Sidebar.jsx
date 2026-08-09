@@ -61,7 +61,7 @@ export default function Sidebar({ activeView, setActiveView }) {
         
         {/* Tier Indicator */}
         <div className="px-5 pb-3">
-          <span className={isComplianceHead ? "tier-badge-active" : "tier-badge"}>
+          <span className={`tier-badge ${isComplianceHead ? "tier-badge-active" : ""}`}>
             {isComplianceHead ? 'TIER 2 — COMPLIANCE HEAD' : 'TIER 1 — FOUNDER'}
           </span>
         </div>

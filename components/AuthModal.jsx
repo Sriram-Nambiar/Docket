@@ -130,7 +130,7 @@ export default function AuthModal({ isOpen, onClose }) {
                     <LayoutDashboard className="w-4 h-4 text-amber" />
                     Compliance Head
                   </span>
-                  <span className="tier-badge-active">Tier 2</span>
+                  <span className="tier-badge tier-badge-active">Tier 2</span>
                 </div>
                 <p className="text-sm text-muted leading-relaxed mt-2">
                   Ledger dashboard, visual task graph, live audit feed & rule engine.

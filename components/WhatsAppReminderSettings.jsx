@@ -229,24 +229,27 @@ export default function WhatsAppReminderSettings() {
           <div className="space-y-2.5">
             {whatsappLogs.length > 0 ? (
               whatsappLogs.map((log) => (
-                <div key={log.id} className="log-row p-2.5 bg-paper-warm border border-hairline rounded-sm space-y-1">
-                  <div className="flex items-center justify-between text-xs">
+                <div key={log.id} className="p-3 bg-paper-warm border border-hairline rounded-sm space-y-2 font-mono text-xs">
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="w-5 h-5 rounded-full bg-emerald-700 text-white font-bold text-[10px] flex items-center justify-center">
+                      <span className="w-5 h-5 rounded-sm bg-emerald-700 text-white font-bold text-[10px] flex items-center justify-center shrink-0">
                         WA
                       </span>
                       <span className="font-semibold text-ink">{log.actor}</span>
                     </div>
-                    <span className="log-timestamp">{log.timestamp}</span>
+                    <span className="text-[11px] text-muted whitespace-nowrap">{log.timestamp}</span>
                   </div>
 
-                  <p className="text-xs text-ink-light pl-7 font-mono">
-                    {log.action} <strong className="text-ink">{log.target}</strong>
-                  </p>
+                  <div className="text-xs text-ink-light pl-7 space-y-0.5 leading-relaxed">
+                    <span>{log.action} </span>
+                    {log.target && <strong className="text-ink font-semibold block mt-0.5">{log.target}</strong>}
+                  </div>
 
-                  <div className="pl-7 flex items-center justify-between text-[10px] text-muted font-mono">
-                    <span>Hash: {log.hash}</span>
-                    <span className="text-verified font-bold">✓ Delivered</span>
+                  <div className="pl-7 pt-1.5 flex items-center justify-between text-[10px] text-muted border-t border-hairline/60">
+                    <span>Hash: <code className="text-ink font-bold">{log.hash}</code></span>
+                    <span className="text-emerald-700 font-bold flex items-center gap-1">
+                      <Check className="w-3 h-3 text-emerald-700" /> Delivered
+                    </span>
                   </div>
                 </div>
               ))

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Block Diagram of Proposed Solution</title>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true });
+    </script>
+    <style>
+        body { font-family: 'IBM Plex Sans', sans-serif; padding: 40px; max-width: 1000px; margin: 0 auto; background: #FAF9F6; color: #0F172A; }
+        h1 { font-family: 'Fraunces', serif; text-align: center; }
+        p { font-size: 16px; line-height: 1.5; color: #333; margin-bottom: 30px; text-align: center; }
+        .mermaid { display: flex; justify-content: center; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Block Diagram of the Proposed Solution</h1>
+    <p>This block diagram represents the functional modules of the Docket platform and how they integrate to deliver the proposed compliance solution.</p>
+    <div class="mermaid">
+flowchart LR
+    subgraph UserInterface [User Interface & Experience]
+        A1[Tier 1: Solo Founder Intake]
+        A2[Tier 2: Compliance Dashboard]
+        A3[Checklist Engine]
+    end
+
+    subgraph ApplicationLogic [Application API & Logic]
+        B1[NIM Penalty Calculator Engine]
+        B2[Document Extraction & Evaluator]
+        B3[Role-Based Access Control]
+    end
+
+    subgraph ExternalIntegrations [External AI & Services]
+        C1[NVIDIA NIM Llama 3.1]
+        C2[WhatsApp Business Gateway]
+        C3[Redis Event Fanout Queue]
+    end
+
+    UserInterface -->|API Requests| ApplicationLogic
+    ApplicationLogic -->|Inference Requests| C1
+    ApplicationLogic -->|Dispatch Alerts| C2
+    ApplicationLogic -->|Pub/Sub Events| C3
+    </div>
+</body>
+</html>
