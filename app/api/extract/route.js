@@ -1,11 +1,24 @@
 import { NextResponse } from 'next/server';
+import { getLocalExtraction } from '../../../lib/localAnalysis';
 
 export async function POST(request) {
+  let text = '';
+  let fileName = '';
   try {
-    const { text, fileName } = await request.json();
+    ({ text, fileName } = await request.json());
 
     if (!text) {
       return NextResponse.json({ success: false, error: 'No text provided' }, { status: 400 });
+    }
+
+    if (!process.env.NVIDIA_API_KEY) {
+      return NextResponse.json({
+        success: true,
+        extraction: getLocalExtraction({ text, fileName }),
+        aiGenerated: false,
+        source: 'local_fallback',
+        timestamp: new Date().toISOString(),
+      });
     }
 
     const systemPrompt = `You are a Document Intelligence Agent for Indian regulatory compliance.
@@ -19,6 +32,7 @@ Output valid JSON with keys: documentType (string), entities (object), matchedRu
 
     const response = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
       method: 'POST',
+      signal: AbortSignal.timeout(8000),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${process.env.NVIDIA_API_KEY}`
@@ -90,6 +104,14 @@ Output valid JSON with keys: documentType (string), entities (object), matchedRu
 
   } catch (error) {
     console.error('Extraction Error:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    if (!text) return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({
+      success: true,
+      extraction: getLocalExtraction({ text, fileName }),
+      aiGenerated: false,
+      source: 'local_fallback',
+      providerError: 'The AI provider was unavailable; limited local analysis returned instead.',
+      timestamp: new Date().toISOString(),
+    });
   }
 }

@@ -6,62 +6,24 @@ import {
   Clock, 
   AlertTriangle, 
   CheckCircle2, 
-  Plus, 
-  FileText, 
   ChevronRight, 
-  ExternalLink, 
-  Search, 
-  Filter, 
   GitCommit, 
-  UserCheck, 
   Calendar,
-  Lock,
   X,
-  Calculator,
-  MessageCircle,
-  Sparkles
+  Calculator
 } from 'lucide-react';
 import { 
   COMPLIANCE_KPI_METRICS, 
   STATUTORY_TIMELINE_ITEMS, 
-  GITHUB_STYLE_AUDIT_FEED, 
-  REGULATORY_RULES_FULL 
+  GITHUB_STYLE_AUDIT_FEED
 } from '../lib/mockData';
 import { taskStore } from '../lib/taskStore';
 import PenaltyCalculatorPanel from './PenaltyCalculatorPanel';
 
-export default function ComplianceHeadDashboard({ onOpenNewProjectModal, onNavigateView }) {
+export default function ComplianceHeadDashboard({ onNavigateView }) {
   const [selectedTimelineItem, setSelectedTimelineItem] = useState(null);
-  const [filterCategory, setFilterCategory] = useState('All');
-  const [searchQuery, setSearchQuery] = useState('');
   const [isPenaltyModalOpen, setIsPenaltyModalOpen] = useState(false);
   const [penaltyModalItem, setPenaltyModalItem] = useState(null);
-
-  // Filter rules
-  const filteredTimeline = STATUTORY_TIMELINE_ITEMS.filter(item => {
-    const matchesCategory = filterCategory === 'All' || item.type.toLowerCase().includes(filterCategory.toLowerCase());
-    const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          item.authority.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
-
-  const handleScanCirculars = async () => {
-    // Simulate scraper finding a new MCA circular
-    await fetch('/api/notifications', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        type: 'RULE_UPDATE_NOTIF',
-        id: `rule-${Date.now()}`,
-        payload: {
-          authority: 'Ministry of Corporate Affairs (MCA)',
-          circularNo: 'Circular 14/2023',
-          message: 'New MCA Circular detected regarding AOC-4 XBRL mandates.',
-          urgency: 'Normal'
-        }
-      })
-    });
-  };
 
   const handleRiskScan = async () => {
     // Find all Amber and Red timeline items
@@ -72,9 +34,11 @@ export default function ComplianceHeadDashboard({ onOpenNewProjectModal, onNavig
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          type: 'OBLIGATION_DUE_ALERT',
-          id: `risk-${item.id}-${Date.now()}`,
-          payload: {
+          eventType: 'OBLIGATION_DUE_ALERT',
+          title: `Risk scan: ${item.title}`,
+          description: `Obligation is ${item.status === 'Red' ? 'overdue or critical' : 'approaching its deadline'}.`,
+          entityName: 'Apex Technologies Pvt Ltd',
+          metadata: {
             title: item.title,
             dueDate: item.dueDate,
             assignedTo: item.assignedTo,
@@ -107,48 +71,40 @@ export default function ComplianceHeadDashboard({ onOpenNewProjectModal, onNavig
     <div className="space-y-6">
       
       {/* Main Content Header: Welcome Back + Global New Project Button */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-surface p-6 rounded-sm border border-hairline">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-1">
         <div>
-          <h1 className="font-serif text-xl font-semibold text-ink tracking-tight">
-            Welcome back, Compliance Head
-          </h1>
-          <p className="text-sm text-muted mt-0.5 leading-relaxed">
+          <p className="label-caps mb-2">Apex Technologies Pvt Ltd</p>
+          <h1 className="font-serif text-2xl font-semibold text-ink tracking-tight">Compliance overview</h1>
+          <p className="hidden">
             Single-pane Bento Box command center • Single source of statutory truth for Apex Technologies Pvt Ltd.
           </p>
+          <p className="text-sm text-muted mt-1 leading-relaxed">Prioritize what needs attention, then move it into an accountable task.</p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => onNavigateView('tasks')}
+            className="btn-secondary"
+          >
+            <span>Open tasks</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+
           <button
             onClick={() => {
               setPenaltyModalItem({ title: 'Form 26Q', dueDate: '2026-06-15', authority: 'Income Tax', citation: 'IT Act Sec 234E' });
               setIsPenaltyModalOpen(true);
             }}
-            className="btn-accent px-3.5 py-2 rounded-sm text-white text-sm font-semibold flex items-center gap-1.5 cursor-pointer"
+            className="btn-accent"
           >
             <Calculator className="w-4 h-4" />
-            <span>Risk & Penalty Panel</span>
-          </button>
-
-          <button
-            onClick={() => onNavigateView('whatsapp_settings')}
-            className="btn-secondary px-3.5 py-2 rounded-sm text-ink text-sm font-semibold flex items-center gap-1.5 cursor-pointer"
-          >
-            <MessageCircle className="w-4 h-4 text-emerald-700" />
-            <span>WhatsApp Reminders</span>
-          </button>
-          
-          <button
-            onClick={onOpenNewProjectModal}
-            className="px-4 py-2 rounded-sm bg-ink hover:bg-slate-800 text-white text-sm font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>New Project</span>
+            <span>Assess risk</span>
           </button>
         </div>
       </div>
 
       {/* Top Row: Three Minimal Metric KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         
         {/* KPI 1: Overall Compliance Score */}
         <div className="ledger-card p-5 space-y-3">
@@ -173,7 +129,7 @@ export default function ComplianceHeadDashboard({ onOpenNewProjectModal, onNavig
         {/* KPI 2: Upcoming Deadlines (Next 30 Days) */}
         <div className="ledger-card p-5 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold text-muted">Upcoming Deadlines (Next 30 Days)</span>
+            <span className="text-sm font-semibold text-muted">Due in the next 30 days</span>
             <span className="status-uploaded inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-bold text-xs border">
               <Clock className="w-3.5 h-3.5" />
               Attention Needed
@@ -209,7 +165,7 @@ export default function ComplianceHeadDashboard({ onOpenNewProjectModal, onNavig
       </div>
 
       {/* Middle Row (Bento Split View): Left Timeline + Right Recent Activity Audit Log */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         
         {/* Left Side: Compliance Timeline List (7 cols) */}
         <div className="lg:col-span-7 ledger-card p-5 space-y-4">
@@ -217,7 +173,7 @@ export default function ComplianceHeadDashboard({ onOpenNewProjectModal, onNavig
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-amber" />
               <h2 className="font-serif text-sm font-semibold text-ink uppercase tracking-wider">
-                Compliance Timeline (1-Year, 2-Year & Recurring Lifecycles)
+                Upcoming obligations
               </h2>
             </div>
             <div className="flex items-center gap-3">
@@ -227,12 +183,12 @@ export default function ComplianceHeadDashboard({ onOpenNewProjectModal, onNavig
               >
                 Run Risk Scan
               </button>
-              <span className="text-sm text-muted font-medium hidden sm:inline">Progressive Disclosure</span>
+              <span className="text-sm text-muted font-medium hidden sm:inline">Select an item to review</span>
             </div>
           </div>
 
           <div className="space-y-3">
-            {filteredTimeline.map((item) => (
+            {STATUTORY_TIMELINE_ITEMS.map((item) => (
               <div 
                 key={item.id}
                 onClick={() => setSelectedTimelineItem(item)}
@@ -282,10 +238,10 @@ export default function ComplianceHeadDashboard({ onOpenNewProjectModal, onNavig
             <div className="flex items-center gap-2">
               <GitCommit className="w-4 h-4 text-ink" />
               <h2 className="font-serif text-sm font-semibold text-ink uppercase tracking-wider">
-                Recent Activity & Audit Log Feed
+                Recent activity
               </h2>
             </div>
-            <span className="text-sm text-muted font-medium">GitHub-Style Log</span>
+            <span className="text-sm text-muted font-medium">Audit trail</span>
           </div>
 
           <div className="space-y-0">

@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
+import { getLocalQueryResponse } from '../../../lib/localAnalysis';
 
 export async function POST(req) {
+  let prompt = '';
   try {
-    const { prompt } = await req.json();
+    ({ prompt } = await req.json());
     if (!prompt) {
       return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
     }
@@ -12,7 +14,15 @@ export async function POST(req) {
     const model = process.env.NIM_MODEL || 'meta/llama-3.1-70b-instruct';
 
     if (!apiKey) {
-      return NextResponse.json({ error: 'NVIDIA_API_KEY is not configured in .env.local' }, { status: 500 });
+      return NextResponse.json({
+        success: true,
+        model: 'local-fallback',
+        result: getLocalQueryResponse(prompt),
+        aiGenerated: false,
+        source: 'local_fallback',
+        disclaimer: 'Local workspace guidance only. Review with a qualified compliance/legal SME before use in regulatory decisions.',
+        timestamp: new Date().toISOString(),
+      });
     }
 
     const systemPrompt = `You are an AI Compliance & Regulatory Intelligence Assistant specialized in Indian statutory law (Ministry of Corporate Affairs / Companies Act 2013, CBIC CGST Act 2017, Income Tax Act 1961, EPFO, and DPDP Act).
@@ -23,6 +33,7 @@ Be concise, authoritative, and structured.`;
 
     const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
+      signal: AbortSignal.timeout(8000),
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
@@ -39,8 +50,16 @@ Be concise, authoritative, and structured.`;
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      return NextResponse.json({ error: `NVIDIA NIM API Error: ${response.status}`, details: errorText }, { status: response.status });
+      return NextResponse.json({
+        success: true,
+        model: 'local-fallback',
+        result: getLocalQueryResponse(prompt),
+        aiGenerated: false,
+        source: 'local_fallback',
+        providerError: `The AI provider returned ${response.status}; local workspace guidance returned instead.`,
+        disclaimer: 'Local workspace guidance only. Review with a qualified compliance/legal SME before use in regulatory decisions.',
+        timestamp: new Date().toISOString(),
+      });
     }
 
     const data = await response.json();
@@ -57,6 +76,16 @@ Be concise, authoritative, and structured.`;
     });
 
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    if (!prompt) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({
+      success: true,
+      model: 'local-fallback',
+      result: getLocalQueryResponse(prompt),
+      aiGenerated: false,
+      source: 'local_fallback',
+      providerError: 'The AI provider was unavailable; local workspace guidance returned instead.',
+      disclaimer: 'Local workspace guidance only. Review with a qualified compliance/legal SME before use in regulatory decisions.',
+      timestamp: new Date().toISOString(),
+    });
   }
 }

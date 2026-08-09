@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getLocalIntakeAnalysis } from '../../../lib/localAnalysis';
 
 export async function POST(req) {
   try {
@@ -9,7 +10,14 @@ export async function POST(req) {
     const model = process.env.NIM_MODEL || 'meta/llama-3.1-70b-instruct';
 
     if (!apiKey) {
-      return NextResponse.json({ error: 'NVIDIA_API_KEY is not configured in .env.local' }, { status: 500 });
+      return NextResponse.json({
+        success: true,
+        analysis: getLocalIntakeAnalysis({ businessDescription, sector }),
+        aiGenerated: false,
+        source: 'local_fallback',
+        disclaimer: 'Local baseline only. Review with a qualified compliance/legal SME before making regulatory decisions.',
+        timestamp: new Date().toISOString(),
+      });
     }
 
     const prompt = `Analyze the following Indian business intake details and evaluate legal entity suitability (Private Limited Company vs. Limited Liability Partnership vs. Public Limited Company):
@@ -25,6 +33,7 @@ Output valid JSON only with keys:
 
     const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
+      signal: AbortSignal.timeout(8000),
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
@@ -38,8 +47,15 @@ Output valid JSON only with keys:
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      return NextResponse.json({ error: `NVIDIA NIM API Error: ${response.status}`, details: errorText }, { status: response.status });
+      return NextResponse.json({
+        success: true,
+        analysis: getLocalIntakeAnalysis({ businessDescription, sector }),
+        aiGenerated: false,
+        source: 'local_fallback',
+        providerError: `The AI provider returned ${response.status}; local baseline returned instead.`,
+        disclaimer: 'Local baseline only. Review with a qualified compliance/legal SME before making regulatory decisions.',
+        timestamp: new Date().toISOString(),
+      });
     }
 
     const data = await response.json();
@@ -53,7 +69,7 @@ Output valid JSON only with keys:
       } else {
         parsedJSON = JSON.parse(rawContent);
       }
-    } catch (e) {
+    } catch {
       parsedJSON = {
         bestMatch: "Private Limited Company",
         matchScore: "96%",
@@ -77,7 +93,15 @@ Output valid JSON only with keys:
       timestamp: new Date().toISOString(),
     });
 
-  } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch {
+    return NextResponse.json({
+      success: true,
+      analysis: getLocalIntakeAnalysis(),
+      aiGenerated: false,
+      source: 'local_fallback',
+      providerError: 'The AI provider was unavailable; local baseline returned instead.',
+      disclaimer: 'Local baseline only. Review with a qualified compliance/legal SME before making regulatory decisions.',
+      timestamp: new Date().toISOString(),
+    });
   }
 }

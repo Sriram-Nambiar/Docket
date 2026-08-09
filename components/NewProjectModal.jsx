@@ -1,85 +1,79 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Plus, X, Building2, ShieldCheck, Sparkles } from 'lucide-react';
+import { Building2, CheckCircle2, ShieldCheck, X } from 'lucide-react';
 
-export default function NewProjectModal({ isOpen, onClose }) {
+export default function NewProjectModal({ isOpen, onClose, onCreate }) {
   const [projectName, setProjectName] = useState('');
   const [template, setTemplate] = useState('Pvt Ltd');
+  const [isCreated, setIsCreated] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const handleClose = () => {
+    setIsCreated(false);
     onClose();
   };
 
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    const project = { name: projectName.trim(), template, createdAt: new Date().toISOString() };
+    const existing = JSON.parse(window.localStorage.getItem('docket_projects') || '[]');
+    window.localStorage.setItem('docket_projects', JSON.stringify([project, ...existing.filter((item) => item.name !== project.name)]));
+    onCreate?.(project);
+    setIsCreated(true);
+    window.setTimeout(() => {
+      setProjectName('');
+      handleClose();
+    }, 900);
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-      <div className="bg-white rounded-2xl max-w-md w-full p-6 border border-slate-200 shadow-2xl space-y-4">
-        
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="w-5 h-5 text-blue-700" />
-            <h3 className="text-sm font-bold text-slate-900">Initialize New Compliance Project</h3>
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="new-project-title">
+      <div className="modal-panel max-w-md shadow-xl">
+        <div className="flex items-start justify-between gap-4 border-b border-hairline pb-4 mb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-sm bg-amber-light text-amber flex items-center justify-center"><Building2 className="w-5 h-5" /></div>
+            <div>
+              <h2 id="new-project-title" className="font-serif text-lg font-semibold text-ink">Create a workspace</h2>
+              <p className="text-sm text-muted mt-0.5">Start with a tailored compliance baseline.</p>
+            </div>
           </div>
-          <button 
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-700 text-xs font-bold p-1 hover:bg-slate-100 rounded-md"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <button type="button" onClick={handleClose} className="p-1 text-muted hover:text-ink" aria-label="Close"><X className="w-5 h-5" /></button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-          <div className="space-y-1">
-            <label className="text-slate-700 font-semibold block">Project / Entity Name</label>
-            <input
-              type="text"
-              value={projectName}
-              onChange={(e) => setProjectName(e.target.value)}
-              placeholder="e.g. Apex Health Services Ltd"
-              className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-blue-700 focus:ring-1 focus:ring-blue-700"
-              required
-            />
+        {isCreated ? (
+          <div className="py-8 flex flex-col items-center text-center gap-3">
+            <CheckCircle2 className="w-9 h-9 text-verified" />
+            <p className="font-semibold text-ink">Workspace created</p>
+            <p className="text-sm text-muted">Opening your business intake.</p>
           </div>
-
-          <div className="space-y-1">
-            <label className="text-slate-700 font-semibold block">Entity Structure Template</label>
-            <select
-              value={template}
-              onChange={(e) => setTemplate(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:border-blue-700"
-            >
-              <option value="Pvt Ltd">Private Limited Company (Standard Baseline)</option>
-              <option value="Public Listed">Public Listed Entity (SEBI LODR & PIT)</option>
-              <option value="LLP">Limited Liability Partnership (LLP Act)</option>
-              <option value="Hospital">Hospital / Healthcare Provider (PCPNDT, AERB, DPDP)</option>
-              <option value="Startup">Tech Startup (DPIIT, FEMA FC-GPR, ESOPs)</option>
-            </select>
-          </div>
-
-          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-600 leading-relaxed">
-            💡 Selecting a template pre-maps the mandatory statutory rule stack (MCA, GST, Direct Tax, Labor) along with compliance lifecycles.
-          </div>
-
-          <div className="pt-2 flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-5 py-2 rounded-lg bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold shadow-xs"
-            >
-              Create Project
-            </button>
-          </div>
-        </form>
-
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="text-sm font-semibold text-ink block mb-1.5">Business or entity name</label>
+              <input type="text" value={projectName} onChange={(event) => setProjectName(event.target.value)} placeholder="e.g. Apex Health Services Ltd" className="ledger-input" required autoFocus />
+            </div>
+            <div>
+              <label className="text-sm font-semibold text-ink block mb-1.5">Starting template</label>
+              <select value={template} onChange={(event) => setTemplate(event.target.value)} className="ledger-input">
+                <option value="Pvt Ltd">Private limited company</option>
+                <option value="LLP">Limited liability partnership</option>
+                <option value="Startup">Technology startup</option>
+                <option value="Hospital">Healthcare provider</option>
+                <option value="Public Listed">Public listed entity</option>
+              </select>
+            </div>
+            <div className="flex gap-2.5 p-3 bg-paper-warm border border-hairline rounded-sm text-sm text-muted leading-relaxed">
+              <ShieldCheck className="w-4 h-4 text-amber shrink-0 mt-0.5" />
+              <span>We’ll save this workspace on this device and take you to the intake to complete its compliance profile.</span>
+            </div>
+            <div className="pt-2 flex justify-end gap-2">
+              <button type="button" onClick={handleClose} className="btn-secondary">Cancel</button>
+              <button type="submit" className="btn-accent">Create workspace</button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );

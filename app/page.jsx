@@ -21,17 +21,29 @@ import AuthModal from '../components/AuthModal';
 import { useAuth } from '../lib/AuthContext';
 import { ShieldCheck } from 'lucide-react';
 
-export default function HomePage() {
-  const { user, isAuthenticated, loading } = useAuth();
-  const [activeView, setActiveView] = useState('dashboard');
+export default function HomePage({ initialView = 'dashboard' }) {
+  const { user, loading } = useAuth();
+  const [activeView, setActiveView] = useState(initialView);
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [workspaceName, setWorkspaceName] = useState('Apex Technologies Pvt Ltd');
 
   useEffect(() => {
-    if (user?.defaultView) {
+    if (initialView === 'dashboard' && user?.defaultView) {
       setActiveView(user.defaultView);
     }
-  }, [user]);
+  }, [user, initialView]);
+
+  useEffect(() => {
+    const savedWorkspace = window.localStorage.getItem('docket_active_workspace');
+    if (savedWorkspace) setWorkspaceName(savedWorkspace);
+  }, []);
+
+  const handleProjectCreated = (project) => {
+    setWorkspaceName(project.name);
+    window.localStorage.setItem('docket_active_workspace', project.name);
+    setActiveView('intake');
+  };
 
   if (loading) {
     return (
@@ -53,10 +65,11 @@ export default function HomePage() {
         <HeaderNav 
           activeView={activeView} 
           setActiveView={setActiveView}
+          workspaceName={workspaceName}
           onOpenNewProjectModal={() => setIsNewProjectModalOpen(true)}
         />
 
-        <main className="flex-1 p-6 max-w-6xl w-full mx-auto">
+        <main className="flex-1 p-4 sm:p-6 max-w-7xl w-full mx-auto">
           {activeView === 'checklist_workbook' && <ChecklistEngineWorkbook />}
           {activeView === 'intake' && <SoloFounderIntake onNavigateDashboard={setActiveView} />}
           {activeView === 'dashboard' && (
@@ -115,6 +128,7 @@ export default function HomePage() {
       <NewProjectModal
         isOpen={isNewProjectModalOpen}
         onClose={() => setIsNewProjectModalOpen(false)}
+        onCreate={handleProjectCreated}
       />
       <AuthModal
         isOpen={isAuthModalOpen}

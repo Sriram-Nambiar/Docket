@@ -45,35 +45,38 @@ export default function TaskCreateModal({ isOpen, onClose, initialData = null })
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-      <div className="bg-white rounded-2xl max-w-md w-full p-6 border border-slate-200 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
-          <h2 className="text-lg font-bold text-slate-900">Create New Task</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-700 p-1 hover:bg-slate-100 rounded-md">
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="new-task-title">
+      <div className="modal-panel max-w-md shadow-xl">
+        <div className="flex items-center justify-between border-b border-hairline pb-4 mb-5">
+          <div>
+            <p className="label-caps mb-1">Task assignment</p>
+            <h2 id="new-task-title" className="font-serif text-lg font-semibold text-ink">Create a task</h2>
+          </div>
+          <button type="button" onClick={onClose} className="text-muted hover:text-ink p-1 hover:bg-paper-warm rounded-sm" aria-label="Close">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Task Title</label>
+            <label className="block text-sm font-semibold text-ink mb-1.5">Task title</label>
             <input 
               type="text" 
               required 
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent" 
+              className="ledger-input" 
               placeholder="e.g. DIR-3 KYC Verification" 
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Linked Rule</label>
+            <label className="block text-sm font-semibold text-ink mb-1.5">Linked rule</label>
             <select 
               required 
               value={ruleId}
               onChange={(e) => setRuleId(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+              className="ledger-input"
             >
               <option value="">Select a rule...</option>
               {REGULATORY_RULES_FULL.map(rule => (
@@ -84,22 +87,22 @@ export default function TaskCreateModal({ isOpen, onClose, initialData = null })
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Assignee Name</label>
+              <label className="block text-sm font-semibold text-ink mb-1.5">Assignee</label>
               <input 
                 type="text" 
                 required 
                 value={assignee}
                 onChange={(e) => setAssignee(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent" 
+                className="ledger-input" 
                 placeholder="e.g. Tax Lead (Y)" 
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Department</label>
+              <label className="block text-sm font-semibold text-ink mb-1.5">Department</label>
               <select 
                 value={department}
                 onChange={(e) => setDepartment(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                className="ledger-input"
               >
                 <option value="Tax">Tax</option>
                 <option value="Legal">Legal</option>
@@ -111,27 +114,27 @@ export default function TaskCreateModal({ isOpen, onClose, initialData = null })
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Deadline</label>
+            <label className="block text-sm font-semibold text-ink mb-1.5">Deadline</label>
             <input 
               type="date" 
               required 
               value={deadline}
               onChange={(e) => setDeadline(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent" 
+              className="ledger-input"
             />
           </div>
 
-          <div className="pt-4 flex justify-end gap-3">
+          <div className="pt-2 flex justify-end gap-2">
             <button 
               type="button" 
               onClick={onClose}
-              className="px-4 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-100"
+              className="btn-secondary"
             >
               Cancel
             </button>
             <button 
               type="submit" 
-              className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-blue-700 hover:bg-blue-800 shadow-sm"
+              className="btn-accent"
             >
               Create Task
             </button>
