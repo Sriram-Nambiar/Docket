@@ -16,15 +16,27 @@ import {
   FileCheck,
   RefreshCw,
   Search,
-  Filter
+  Filter,
+  MessageCircle,
+  ShieldAlert,
+  Send,
+  BellRing
 } from 'lucide-react';
+import PenaltyCalculatorPanel from './PenaltyCalculatorPanel';
+import { taskStore } from '../lib/taskStore';
+import { PENALTY_RULES_MAP } from '../lib/mockData';
 
 export default function ChecklistEngineWorkbook() {
   const [activeTab, setActiveTab] = useState('live_checklist');
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
+  const [selectedPenaltyItem, setSelectedPenaltyItem] = useState(null);
+  const [whatsappActiveMap, setWhatsappActiveMap] = useState({
+    'INC-001': true,
+    'GST-002': true,
+    'ROC-004': true
+  });
 
-  // Pre-loaded working dataset from the workbook plan
   const [obligations, setObligations] = useState([
     {
       id: "INC-001",
@@ -268,10 +280,9 @@ export default function ChecklistEngineWorkbook() {
     }
   ]);
 
-  // Helper functions to compute formula columns
   const getDaysUntilDue = (dueDateStr) => {
     if (!dueDateStr) return 0;
-    const today = new Date("2026-08-08"); // Current platform baseline date
+    const today = new Date("2026-08-08");
     const due = new Date(dueDateStr);
     const diffTime = due - today;
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -308,7 +319,6 @@ export default function ChecklistEngineWorkbook() {
     return Number((item.penaltySeverity * urgency).toFixed(1));
   };
 
-  // State handlers for yellow editable cells
   const handleCellChange = (id, field, value) => {
     setObligations(prev => prev.map(ob => {
       if (ob.id === id) {
@@ -318,7 +328,6 @@ export default function ChecklistEngineWorkbook() {
     }));
   };
 
-  // Roll-up statistics for Dashboard Tab
   const computedObligations = obligations.map(ob => ({
     ...ob,
     daysUntilDue: getDaysUntilDue(ob.nextDueDate),
@@ -334,7 +343,6 @@ export default function ChecklistEngineWorkbook() {
     return matchesCategory && matchesSearch;
   });
 
-  // Roll-up Status Summary
   const statusCounts = {
     "Not Started": computedObligations.filter(o => o.status === "Not Started"),
     "Evidence Uploaded - Unverified": computedObligations.filter(o => o.status === "Evidence Uploaded - Unverified"),
@@ -345,7 +353,6 @@ export default function ChecklistEngineWorkbook() {
   const totalRiskSum = computedObligations.reduce((acc, curr) => acc + curr.riskScore, 0);
   const itemsNeedingAttention = computedObligations.filter(o => o.riskScore > 10);
 
-  // Roll-up Risk by Category
   const categoriesList = ['Incorporation', 'GST', 'Income Tax', 'ROC', 'Labour'];
   const categoryRollup = categoriesList.map(cat => {
     const catItems = computedObligations.filter(o => o.category === cat);
@@ -354,80 +361,99 @@ export default function ChecklistEngineWorkbook() {
     return { category: cat, openItems, totalRisk: Number(totalRisk.toFixed(1)) };
   });
 
+  const toggleWhatsApp = (id, title, daysLeft) => {
+    const isNowActive = !whatsappActiveMap[id];
+    setWhatsappActiveMap(prev => ({ ...prev, [id]: isNowActive }));
+    
+    if (isNowActive) {
+      taskStore.logWhatsAppReminder(title, daysLeft, '₹50/day late fee');
+    }
+  };
+
+  const getAccruedPenalty = (item) => {
+    if (item.status === 'Filed & Verified') return 0;
+    const rule = PENALTY_RULES_MAP[item.title] || PENALTY_RULES_MAP['GSTR-3B'];
+    const daysLate = item.daysUntilDue < 0 ? Math.abs(item.daysUntilDue) : 0;
+    if (daysLate === 0) return 0;
+    const rate = rule ? (rule.dailyRate || 50) : 50;
+    const total = daysLate * rate;
+    return (rule && rule.maxCap && total > rule.maxCap) ? rule.maxCap : total;
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 leading-relaxed">
       
       {/* Top Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="p-2 rounded-lg bg-slate-900 text-white">
-              <CheckSquare className="w-5 h-5 text-emerald-400" />
+            <span className="p-2 rounded-sm bg-paper-warm text-ink">
+              <CheckSquare className="w-5 h-5 text-amber" />
             </span>
             <div>
-              <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">Checklist Engine — Regulatory Intelligence Platform</h1>
-              <span className="text-xs text-slate-500 font-medium">Official Companion Workbook (Section 22 Product Plan Engine)</span>
+              <h1 className="text-xl font-serif font-extrabold text-ink tracking-tight">Checklist Engine — Regulatory Intelligence Platform</h1>
+              <span className="text-sm text-muted font-medium">Official Companion Workbook (Section 22 Product Plan Engine)</span>
             </div>
           </div>
-          <p className="text-xs text-slate-600 mt-1">
-            Compliance data goes in, and this engine tells you what&apos;s done, what&apos;s left, and what&apos;s at risk — with honest, checkable 4-state statuses.
+          <p className="text-sm text-muted mt-1">
+            Compliance data goes in, and this engine tells you what's done, what's left, and what's at risk — with honest, checkable 4-state statuses.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-xs font-mono font-bold">
+          <span className="px-3 py-1.5 rounded-sm bg-amber-light border border-hairline text-ink text-sm font-mono font-bold">
             Yellow Cells = Your Input • Grey = Formula
           </span>
         </div>
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-2">
+      <div className="flex flex-wrap gap-2 border-b border-hairline bg-paper pb-2">
         <button
           onClick={() => setActiveTab('live_checklist')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+          className={`px-4 py-2 text-sm transition-all cursor-pointer flex items-center gap-2 ${
             activeTab === 'live_checklist'
-              ? 'bg-slate-900 text-white shadow-sm'
-              : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+              ? 'border-b-2 border-amber text-amber font-semibold'
+              : 'text-muted hover:text-ink'
           }`}
         >
-          <CheckSquare className="w-4 h-4 text-emerald-400" />
+          <CheckSquare className="w-4 h-4" />
           <span>Tab 1: Live Obligations Checklist</span>
         </button>
 
         <button
           onClick={() => setActiveTab('dashboard')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+          className={`px-4 py-2 text-sm transition-all cursor-pointer flex items-center gap-2 ${
             activeTab === 'dashboard'
-              ? 'bg-slate-900 text-white shadow-sm'
-              : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+              ? 'border-b-2 border-amber text-amber font-semibold'
+              : 'text-muted hover:text-ink'
           }`}
         >
-          <LayoutDashboard className="w-4 h-4 text-indigo-400" />
+          <LayoutDashboard className="w-4 h-4" />
           <span>Tab 2: Roll-Up Dashboard</span>
         </button>
 
         <button
           onClick={() => setActiveTab('status_definitions')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+          className={`px-4 py-2 text-sm transition-all cursor-pointer flex items-center gap-2 ${
             activeTab === 'status_definitions'
-              ? 'bg-slate-900 text-white shadow-sm'
-              : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+              ? 'border-b-2 border-amber text-amber font-semibold'
+              : 'text-muted hover:text-ink'
           }`}
         >
-          <Info className="w-4 h-4 text-amber-400" />
+          <Info className="w-4 h-4" />
           <span>Tab 3: Status Definitions</span>
         </button>
 
         <button
           onClick={() => setActiveTab('risk_scoring_formula')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+          className={`px-4 py-2 text-sm transition-all cursor-pointer flex items-center gap-2 ${
             activeTab === 'risk_scoring_formula'
-              ? 'bg-slate-900 text-white shadow-sm'
-              : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+              ? 'border-b-2 border-amber text-amber font-semibold'
+              : 'text-muted hover:text-ink'
           }`}
         >
-          <Calculator className="w-4 h-4 text-cyan-400" />
+          <Calculator className="w-4 h-4" />
           <span>Tab 4: Risk Scoring Formula</span>
         </button>
       </div>
@@ -437,97 +463,117 @@ export default function ChecklistEngineWorkbook() {
         <div className="space-y-4">
           
           {/* Controls Bar */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-surface p-4 rounded-sm border border-hairline">
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <div className="relative w-full sm:w-72">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                <Search className="w-4 h-4 text-muted absolute left-3 top-2.5" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search obligation, ID, or citation..."
-                  className="w-full pl-9 pr-3 py-1.5 border border-slate-200 rounded-lg text-xs bg-slate-50 focus:bg-white"
+                  className="w-full pl-9 pr-3 py-1.5 border border-hairline rounded-sm text-sm bg-surface text-ink focus:border-amber focus:outline-none"
                 />
               </div>
 
-              <select
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-                className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs bg-slate-50 text-slate-700 font-semibold"
-              >
-                <option value="All">All Categories</option>
-                <option value="Incorporation">Incorporation</option>
-                <option value="GST">GST</option>
-                <option value="Income Tax">Income Tax</option>
-                <option value="ROC">ROC</option>
-                <option value="Labour">Labour</option>
-              </select>
+              <div className="flex flex-wrap gap-1">
+                {['All', 'Incorporation', 'GST', 'Income Tax', 'ROC', 'Labour'].map(cat => (
+                  <button
+                    key={cat}
+                    onClick={() => setCategoryFilter(cat)}
+                    className={`px-3 py-1.5 rounded-sm border text-sm font-semibold transition-all ${
+                      categoryFilter === cat 
+                        ? 'bg-amber-light border-amber text-amber' 
+                        : 'border-hairline text-muted hover:border-amber hover:text-ink'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
+            <div className="flex items-center gap-2 text-sm font-medium text-muted">
+              <button
+                onClick={() => setSelectedPenaltyItem({ title: 'GSTR-3B', dueDate: '2026-08-20', authority: 'CBIC / GSTN', citation: 'CGST Act 2017 Sec 47' })}
+                className="btn-accent px-3 py-1.5 rounded-sm text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+              >
+                <ShieldAlert className="w-3.5 h-3.5" />
+                <span>Open Risk & Penalty Panel</span>
+              </button>
               <span>Showing {filteredObligations.length} of {obligations.length} Obligations</span>
             </div>
           </div>
 
           {/* Interactive Checklist Table */}
-          <div className="enterprise-card overflow-hidden">
+          <div className="ledger-card overflow-hidden border border-hairline">
             <div className="overflow-x-auto max-h-[600px]">
-              <table className="w-full text-left text-xs font-sans border-collapse">
-                <thead className="sticky top-0 bg-slate-900 text-white font-mono text-[11px] z-10 shadow-xs">
+              <table className="w-full text-left text-sm font-sans border-collapse">
+                <thead className="sticky top-0 bg-paper-warm border-b-2 border-hairline text-ink font-semibold font-mono text-xs uppercase tracking-wider z-10">
                   <tr>
-                    <th className="p-3">ID</th>
-                    <th className="p-3">Title & Category</th>
-                    <th className="p-3">Authority / Freq</th>
-                    <th className="p-3">Evidence Required</th>
-                    <th className="p-3 bg-amber-500/20 text-amber-200 border-x border-amber-500/30 text-center">
+                    <th className="p-3 border-b-2 border-hairline">ID</th>
+                    <th className="p-3 border-b-2 border-hairline">Title & Category</th>
+                    <th className="p-3 border-b-2 border-hairline">Authority / Freq</th>
+                    <th className="p-3 border-b-2 border-hairline">Evidence Required</th>
+                    <th className="p-3 border-b-2 border-hairline border-x text-center">
                       Evidence Uploaded (Y/N)
                     </th>
-                    <th className="p-3 bg-amber-500/20 text-amber-200 border-r border-amber-500/30 text-center">
+                    <th className="p-3 border-b-2 border-hairline border-r text-center">
                       SME Verified (Y/N)
                     </th>
-                    <th className="p-3 bg-amber-500/20 text-amber-200 border-r border-amber-500/30">
+                    <th className="p-3 border-b-2 border-hairline border-r">
                       Next Due Date
                     </th>
-                    <th className="p-3 bg-slate-800 text-slate-300">Days Due</th>
-                    <th className="p-3 bg-amber-500/20 text-amber-200 border-x border-amber-500/30 text-center">
+                    <th className="p-3 border-b-2 border-hairline border-r text-center">
+                      WhatsApp Alert
+                    </th>
+                    <th className="p-3 border-b-2 border-hairline">Days Due</th>
+                    <th className="p-3 border-b-2 border-hairline border-x text-center">
                       Penalty Sev (1-5)
                     </th>
-                    <th className="p-3 bg-slate-800 text-slate-300">Honest Status</th>
-                    <th className="p-3 bg-slate-800 text-slate-300">Risk Score</th>
-                    <th className="p-3 bg-amber-500/20 text-amber-200 border-l border-amber-500/30">
+                    <th className="p-3 border-b-2 border-hairline">Honest Status</th>
+                    <th className="p-3 border-b-2 border-hairline">Accrued Penalty</th>
+                    <th className="p-3 border-b-2 border-hairline">Risk Score</th>
+                    <th className="p-3 border-b-2 border-hairline border-l">
                       Last Verified
                     </th>
-                    <th className="p-3">Citation</th>
+                    <th className="p-3 border-b-2 border-hairline">Citation</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-hairline-light">
                   {filteredObligations.map(item => {
                     const isHighRisk = item.riskScore > 10;
+                    const isWhatsAppActive = !!whatsappActiveMap[item.id];
+                    const accruedPenalty = getAccruedPenalty(item);
+                    
+                    const statusClass = item.status === 'Filed & Verified' ? 'status-verified' :
+                                        item.status === 'Evidence Uploaded - Unverified' ? 'status-uploaded' :
+                                        item.status === 'Overdue' ? 'status-overdue' : 'status-not-started';
 
                     return (
                       <tr 
                         key={item.id}
-                        className={`hover:bg-slate-50/80 transition-colors ${
-                          isHighRisk ? 'bg-rose-50/50' : ''
+                        className={`even:bg-paper-warm hover:bg-paper transition-colors ${
+                          isHighRisk ? 'bg-overdue-light' : ''
                         }`}
                       >
-                        <td className="p-3 font-mono font-bold text-slate-900">{item.id}</td>
-                        <td className="p-3 font-bold text-slate-900">
+                        <td className="p-3 font-mono font-semibold text-ink">{item.id}</td>
+                        <td className="p-3 font-semibold text-ink">
                           <div>{item.title}</div>
-                          <span className="text-[10px] text-slate-500 font-normal">{item.category} • {item.applicability}</span>
+                          <span className="text-sm text-muted font-normal">{item.category} • {item.applicability}</span>
                         </td>
-                        <td className="p-3 text-slate-700 font-medium">
+                        <td className="p-3 text-ink-light font-medium">
                           <div>{item.authority}</div>
-                          <span className="text-[10px] text-slate-500 font-normal">{item.frequency}</span>
+                          <span className="text-sm text-muted font-normal">{item.frequency}</span>
                         </td>
-                        <td className="p-3 text-slate-600 text-[11px]">{item.evidenceRequired}</td>
+                        <td className="p-3 text-muted text-sm">{item.evidenceRequired}</td>
 
                         {/* Yellow Editable Input Cell: Evidence Uploaded */}
-                        <td className="p-2 bg-amber-50/80 border-x border-amber-100 text-center">
+                        <td className="p-2 bg-amber-light border border-hairline focus-within:border-amber text-center">
                           <button
                             onClick={() => handleCellChange(item.id, 'evidenceUploaded', !item.evidenceUploaded)}
-                            className={`px-2.5 py-1 rounded text-xs font-mono font-bold cursor-pointer transition-all ${
-                              item.evidenceUploaded ? 'bg-amber-400 text-amber-950 shadow-xs' : 'bg-amber-100/80 text-amber-700 hover:bg-amber-200'
+                            className={`px-2.5 py-1 rounded text-sm font-mono font-semibold cursor-pointer transition-all border-none focus:outline-none ${
+                              item.evidenceUploaded ? 'bg-amber text-white' : 'bg-transparent text-ink hover:text-amber'
                             }`}
                           >
                             {item.evidenceUploaded ? 'Y' : 'N'}
@@ -535,11 +581,11 @@ export default function ChecklistEngineWorkbook() {
                         </td>
 
                         {/* Yellow Editable Input Cell: SME Verified */}
-                        <td className="p-2 bg-amber-50/80 border-r border-amber-100 text-center">
+                        <td className="p-2 bg-amber-light border border-hairline focus-within:border-amber text-center">
                           <button
                             onClick={() => handleCellChange(item.id, 'smeVerified', !item.smeVerified)}
-                            className={`px-2.5 py-1 rounded text-xs font-mono font-bold cursor-pointer transition-all ${
-                              item.smeVerified ? 'bg-amber-400 text-amber-950 shadow-xs' : 'bg-amber-100/80 text-amber-700 hover:bg-amber-200'
+                            className={`px-2.5 py-1 rounded text-sm font-mono font-semibold cursor-pointer transition-all border-none focus:outline-none ${
+                              item.smeVerified ? 'bg-amber text-white' : 'bg-transparent text-ink hover:text-amber'
                             }`}
                           >
                             {item.smeVerified ? 'Y' : 'N'}
@@ -547,26 +593,42 @@ export default function ChecklistEngineWorkbook() {
                         </td>
 
                         {/* Yellow Editable Input Cell: Next Due Date */}
-                        <td className="p-2 bg-amber-50/80 border-r border-amber-100">
+                        <td className="p-2 bg-amber-light border border-hairline focus-within:border-amber">
                           <input
                             type="date"
                             value={item.nextDueDate}
                             onChange={(e) => handleCellChange(item.id, 'nextDueDate', e.target.value)}
-                            className="w-full px-2 py-1 bg-amber-100/80 rounded font-mono text-[11px] font-bold text-slate-900 focus:bg-white"
+                            className="w-full px-2 py-1 bg-transparent border-none text-ink text-sm font-mono focus:outline-none"
                           />
                         </td>
 
+                        {/* WhatsApp Toggle Cell */}
+                        <td className="p-2 bg-paper-warm border border-hairline text-center">
+                          <button
+                            onClick={() => toggleWhatsApp(item.id, item.title, item.daysUntilDue)}
+                            title={isWhatsAppActive ? "WhatsApp Reminder Active — Click to Toggle" : "Click to Enable WhatsApp Reminder"}
+                            className={`px-2 py-1 rounded-sm text-xs font-mono font-semibold cursor-pointer transition-all inline-flex items-center gap-1 border ${
+                              isWhatsAppActive
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-400 font-bold'
+                                : 'bg-surface text-muted border-hairline hover:border-amber hover:text-ink'
+                            }`}
+                          >
+                            <MessageCircle className={`w-3.5 h-3.5 ${isWhatsAppActive ? 'text-emerald-600' : 'text-muted'}`} />
+                            <span>{isWhatsAppActive ? 'ON' : 'OFF'}</span>
+                          </button>
+                        </td>
+
                         {/* Grey Formula Cell: Days Until Due */}
-                        <td className="p-3 bg-slate-100/80 font-mono text-center font-bold text-slate-700">
+                        <td className="p-3 bg-paper-warm text-muted font-mono text-sm italic text-center font-semibold">
                           {item.daysUntilDue}
                         </td>
 
                         {/* Yellow Editable Input Cell: Penalty Severity */}
-                        <td className="p-2 bg-amber-50/80 border-x border-amber-100 text-center">
+                        <td className="p-2 bg-amber-light border border-hairline focus-within:border-amber text-center">
                           <select
                             value={item.penaltySeverity}
                             onChange={(e) => handleCellChange(item.id, 'penaltySeverity', Number(e.target.value))}
-                            className="px-2 py-1 bg-amber-100/80 rounded font-mono text-xs font-bold text-slate-900 focus:bg-white cursor-pointer"
+                            className="w-full px-2 py-1 bg-transparent border-none text-ink text-sm font-mono focus:outline-none cursor-pointer"
                           >
                             <option value={1}>1 (Minor)</option>
                             <option value={2}>2 (Low)</option>
@@ -577,35 +639,47 @@ export default function ChecklistEngineWorkbook() {
                         </td>
 
                         {/* Grey Formula Cell: Honest Status */}
-                        <td className="p-3 bg-slate-100/80 font-semibold text-[11px]">
-                          <span className={`px-2 py-1 rounded text-[10px] font-bold block text-center ${
-                            item.status === 'Filed & Verified' ? 'bg-emerald-600 text-white' :
-                            item.status === 'Evidence Uploaded - Unverified' ? 'bg-amber-500 text-white' :
-                            item.status === 'Overdue' ? 'bg-rose-600 text-white' : 'bg-slate-300 text-slate-800'
-                          }`}>
+                        <td className="p-3 bg-paper-warm text-muted font-mono text-sm italic font-semibold">
+                          <span className={`px-2 py-1 rounded-sm text-sm font-semibold block text-center ${statusClass}`}>
                             {item.status}
                           </span>
                         </td>
 
+                        {/* Accrued Rupee Penalty Cell */}
+                        <td className="p-2 bg-paper-warm text-center font-mono">
+                          <button
+                            onClick={() => setSelectedPenaltyItem(item)}
+                            title="Click to calculate exact statutory penalty & escalation timeline"
+                            className={`px-2 py-1 rounded-sm text-xs font-bold font-mono transition-all cursor-pointer inline-flex items-center gap-1 ${
+                              accruedPenalty > 0 
+                                ? 'bg-overdue-light text-overdue border border-overdue hover:bg-overdue hover:text-white' 
+                                : 'bg-surface text-muted border border-hairline hover:border-amber hover:text-ink'
+                            }`}
+                          >
+                            <Calculator className="w-3 h-3" />
+                            <span>{accruedPenalty > 0 ? `₹${accruedPenalty.toLocaleString('en-IN')}` : '₹0'}</span>
+                          </button>
+                        </td>
+
                         {/* Grey Formula Cell: Risk Score */}
-                        <td className={`p-3 bg-slate-100/80 font-mono text-center font-extrabold ${
-                          isHighRisk ? 'text-rose-700 text-sm bg-rose-100/80' : 'text-slate-800'
+                        <td className={`p-3 bg-paper-warm font-mono text-sm italic text-center font-bold ${
+                          isHighRisk ? 'text-overdue bg-overdue-light' : 'text-muted'
                         }`}>
                           {item.riskScore}
                         </td>
 
                         {/* Yellow Editable Input Cell: Last Verified Date */}
-                        <td className="p-2 bg-amber-50/80 border-l border-amber-100">
+                        <td className="p-2 bg-amber-light border border-hairline focus-within:border-amber">
                           <input
                             type="text"
                             value={item.lastVerifiedDate}
                             onChange={(e) => handleCellChange(item.id, 'lastVerifiedDate', e.target.value)}
                             placeholder="YYYY-MM-DD"
-                            className="w-full px-2 py-1 bg-amber-100/80 rounded font-mono text-[11px] text-slate-900 focus:bg-white"
+                            className="w-full px-2 py-1 bg-transparent border-none text-ink text-sm font-mono focus:outline-none"
                           />
                         </td>
 
-                        <td className="p-3 text-slate-500 font-mono text-[10px]">{item.citation}</td>
+                        <td className="p-3 text-muted font-mono text-sm">{item.citation}</td>
                       </tr>
                     );
                   })}
@@ -622,70 +696,70 @@ export default function ChecklistEngineWorkbook() {
           
           {/* Top Metric Summary Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="enterprise-card p-5 space-y-2">
-              <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">
+            <div className="ledger-card p-4 space-y-2 border border-hairline">
+              <span className="text-sm font-semibold text-muted uppercase tracking-wider block">
                 Total Regulatory Obligations
               </span>
-              <div className="text-2xl font-extrabold text-slate-900 font-mono">
+              <div className="text-2xl font-serif font-semibold text-ink">
                 {computedObligations.length}
               </div>
-              <span className="text-[11px] text-slate-500 block">Active monitored statutory rules</span>
+              <span className="text-sm text-muted block">Active monitored statutory rules</span>
             </div>
 
-            <div className="enterprise-card p-5 space-y-2 border-l-4 border-l-rose-500">
-              <span className="text-[10px] font-extrabold uppercase text-rose-500 tracking-wider block flex items-center gap-1">
-                <AlertTriangle className="w-3.5 h-3.5" /> Total Risk Score Exposure
+            <div className="ledger-card p-4 space-y-2 border border-hairline border-l-4 border-l-overdue">
+              <span className="text-sm font-semibold uppercase text-overdue tracking-wider block flex items-center gap-1">
+                <AlertTriangle className="w-4 h-4" /> Total Risk Score Exposure
               </span>
-              <div className="text-2xl font-extrabold text-rose-700 font-mono">
+              <div className="text-2xl font-serif font-semibold text-overdue">
                 {totalRiskSum.toFixed(1)}
               </div>
-              <span className="text-[11px] text-rose-600 font-semibold block">Sum of Penalty × Urgency Factor</span>
+              <span className="text-sm text-overdue font-semibold block">Sum of Penalty × Urgency Factor</span>
             </div>
 
-            <div className="enterprise-card p-5 space-y-2 border-l-4 border-l-amber-500 bg-amber-50/40">
-              <span className="text-[10px] font-extrabold uppercase text-amber-700 tracking-wider block">
+            <div className="ledger-card p-4 space-y-2 border border-hairline border-l-4 border-l-amber bg-amber-light">
+              <span className="text-sm font-semibold uppercase text-amber tracking-wider block">
                 Items Needing Attention Now (Risk &gt; 10)
               </span>
-              <div className="text-2xl font-extrabold text-amber-900 font-mono">
+              <div className="text-2xl font-serif font-semibold text-ink">
                 {itemsNeedingAttention.length}
               </div>
-              <span className="text-[11px] text-amber-800 font-semibold block">High severity or overdue obligations</span>
+              <span className="text-sm text-ink-light font-semibold block">High severity or overdue obligations</span>
             </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             
             {/* Status Roll-Up Table */}
-            <div className="enterprise-card p-6 space-y-4">
-              <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+            <div className="ledger-card p-4 space-y-4 border border-hairline">
+              <h2 className="text-sm font-serif font-semibold text-ink uppercase tracking-wider">
                 Compliance Status Roll-Up Overview
               </h2>
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs font-sans">
+                <table className="w-full text-left text-sm font-sans border-collapse">
                   <thead>
-                    <tr className="border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px] bg-slate-50">
+                    <tr className="border-b border-hairline-light text-muted font-semibold uppercase bg-paper-warm">
                       <th className="p-3">Status</th>
                       <th className="p-3 text-center">Count</th>
                       <th className="p-3 text-right">Total Risk Score</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 font-mono">
+                  <tbody className="divide-y divide-hairline-light font-mono">
                     {Object.keys(statusCounts).map(st => {
                       const count = statusCounts[st].length;
                       const riskSum = statusCounts[st].reduce((acc, curr) => acc + curr.riskScore, 0);
 
                       return (
-                        <tr key={st} className="hover:bg-slate-50/80">
-                          <td className="p-3 font-sans font-bold text-slate-900">{st}</td>
-                          <td className="p-3 text-center font-bold text-slate-800">{count}</td>
-                          <td className="p-3 text-right font-bold text-slate-900">{riskSum.toFixed(1)}</td>
+                        <tr key={st} className="even:bg-paper-warm hover:bg-paper">
+                          <td className="p-3 font-sans font-semibold text-ink">{st}</td>
+                          <td className="p-3 text-center font-semibold text-ink-light">{count}</td>
+                          <td className="p-3 text-right font-semibold text-ink">{riskSum.toFixed(1)}</td>
                         </tr>
                       );
                     })}
-                    <tr className="bg-slate-900 text-white font-bold">
+                    <tr className="bg-paper text-ink font-semibold">
                       <td className="p-3 font-sans">TOTAL</td>
                       <td className="p-3 text-center">{computedObligations.length}</td>
-                      <td className="p-3 text-right text-emerald-400 font-mono">{totalRiskSum.toFixed(1)}</td>
+                      <td className="p-3 text-right text-verified font-mono">{totalRiskSum.toFixed(1)}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -693,25 +767,25 @@ export default function ChecklistEngineWorkbook() {
             </div>
 
             {/* Category Roll-Up Table */}
-            <div className="enterprise-card p-6 space-y-4">
-              <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+            <div className="ledger-card p-4 space-y-4 border border-hairline">
+              <h2 className="text-sm font-serif font-semibold text-ink uppercase tracking-wider">
                 Risk Exposure by Statutory Category
               </h2>
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs font-sans">
+                <table className="w-full text-left text-sm font-sans border-collapse">
                   <thead>
-                    <tr className="border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px] bg-slate-50">
+                    <tr className="border-b border-hairline-light text-muted font-semibold uppercase bg-paper-warm">
                       <th className="p-3">Category</th>
                       <th className="p-3 text-center">Open Items</th>
                       <th className="p-3 text-right">Total Risk</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 font-mono">
+                  <tbody className="divide-y divide-hairline-light font-mono">
                     {categoryRollup.map(cat => (
-                      <tr key={cat.category} className="hover:bg-slate-50/80">
-                        <td className="p-3 font-sans font-bold text-slate-900">{cat.category}</td>
-                        <td className="p-3 text-center font-bold text-slate-800">{cat.openItems}</td>
-                        <td className="p-3 text-right font-bold text-slate-900">{cat.totalRisk.toFixed(1)}</td>
+                      <tr key={cat.category} className="even:bg-paper-warm hover:bg-paper">
+                        <td className="p-3 font-sans font-semibold text-ink">{cat.category}</td>
+                        <td className="p-3 text-center font-semibold text-ink-light">{cat.openItems}</td>
+                        <td className="p-3 text-right font-semibold text-ink">{cat.totalRisk.toFixed(1)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -727,52 +801,52 @@ export default function ChecklistEngineWorkbook() {
       {/* TAB 3: STATUS DEFINITIONS */}
       {activeTab === 'status_definitions' && (
         <div className="space-y-6">
-          <div className="enterprise-card p-6 space-y-4">
-            <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
+          <div className="ledger-card p-4 space-y-4 border border-hairline">
+            <h2 className="text-sm font-serif font-semibold text-ink uppercase tracking-wider">
               The Four Honest Status States (Section 22 Product Plan)
             </h2>
-            <p className="text-xs text-slate-600">
-              This engine deliberately does not use a single green checkmark. &ldquo;A document was uploaded&rdquo; is not the same claim as &ldquo;this obligation is actually satisfied&rdquo;. Collapsing the two is the single highest-liability mistake a compliance tool can make.
+            <p className="text-sm text-muted">
+              This engine deliberately does not use a single green checkmark. "A document was uploaded" is not the same claim as "this obligation is actually satisfied". Collapsing the two is the single highest-liability mistake a compliance tool can make.
             </p>
 
             <div className="space-y-3 pt-2">
               
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-                <div className="flex items-center justify-between font-bold text-xs text-slate-900">
+              <div className="p-4 rounded-sm bg-paper border border-hairline space-y-1">
+                <div className="flex items-center justify-between font-semibold text-sm text-ink">
                   <span>⚪ 1. Not Started</span>
-                  <span className="px-2 py-0.5 rounded bg-slate-200 text-slate-800 text-[10px]">Compliant: NO</span>
+                  <span className="px-2 py-0.5 rounded-sm status-not-started text-sm">Compliant: NO</span>
                 </div>
-                <p className="text-xs text-slate-600">
+                <p className="text-sm text-muted">
                   No evidence has been uploaded, and the due date has not passed yet.
                 </p>
               </div>
 
-              <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 space-y-1">
-                <div className="flex items-center justify-between font-bold text-xs text-amber-950">
+              <div className="p-4 rounded-sm bg-amber-light border border-hairline space-y-1">
+                <div className="flex items-center justify-between font-semibold text-sm text-ink">
                   <span>🟡 2. Evidence Uploaded — Unverified</span>
-                  <span className="px-2 py-0.5 rounded bg-amber-200 text-amber-900 text-[10px]">Compliant: NO (Incomplete for Legal)</span>
+                  <span className="px-2 py-0.5 rounded-sm status-uploaded text-sm">Compliant: NO (Incomplete for Legal)</span>
                 </div>
-                <p className="text-xs text-amber-900">
-                  A document has been uploaded, but has not been checked (by an SME or a deterministic rule match) against the actual statutory requirement. Treat this as &lsquo;not done yet&rsquo; for any legal purpose.
+                <p className="text-sm text-ink-light">
+                  A document has been uploaded, but has not been checked (by an SME or a deterministic rule match) against the actual statutory requirement. Treat this as 'not done yet' for any legal purpose.
                 </p>
               </div>
 
-              <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 space-y-1">
-                <div className="flex items-center justify-between font-bold text-xs text-emerald-950">
+              <div className="p-4 rounded-sm bg-verified-light border border-hairline space-y-1">
+                <div className="flex items-center justify-between font-semibold text-sm text-ink">
                   <span>🟢 3. Filed & Verified</span>
-                  <span className="px-2 py-0.5 rounded bg-emerald-700 text-white text-[10px]">Compliant: YES</span>
+                  <span className="px-2 py-0.5 rounded-sm status-verified text-sm text-white">Compliant: YES</span>
                 </div>
-                <p className="text-xs text-emerald-900">
-                  Evidence is on file AND has been checked against the approved rule (by an SME or a deterministic rule match). This is the only state safe to present to an end user as &ldquo;complete&rdquo;.
+                <p className="text-sm text-ink-light">
+                  Evidence is on file AND has been checked against the approved rule (by an SME or a deterministic rule match). This is the only state safe to present to an end user as "complete".
                 </p>
               </div>
 
-              <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 space-y-1">
-                <div className="flex items-center justify-between font-bold text-xs text-rose-950">
+              <div className="p-4 rounded-sm bg-overdue-light border border-hairline space-y-1">
+                <div className="flex items-center justify-between font-semibold text-sm text-ink">
                   <span>🔴 4. Overdue</span>
-                  <span className="px-2 py-0.5 rounded bg-rose-700 text-white text-[10px]">Compliant: NO (Highest Urgency)</span>
+                  <span className="px-2 py-0.5 rounded-sm status-overdue text-sm text-white">Compliant: NO (Highest Urgency)</span>
                 </div>
-                <p className="text-xs text-rose-900">
+                <p className="text-sm text-ink-light">
                   No verified evidence, and the due date has passed. Always carries the highest urgency multiplier (3.0×) in the Risk Score.
                 </p>
               </div>
@@ -785,13 +859,13 @@ export default function ChecklistEngineWorkbook() {
       {/* TAB 4: RISK SCORING FORMULA */}
       {activeTab === 'risk_scoring_formula' && (
         <div className="space-y-6">
-          <div className="enterprise-card p-6 space-y-5">
+          <div className="ledger-card p-4 space-y-5 border border-hairline">
             <div>
-              <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
+              <h2 className="text-sm font-serif font-semibold text-ink uppercase tracking-wider">
                 Risk Score Calculation Formula
               </h2>
-              <div className="mt-2 p-4 rounded-xl bg-slate-900 text-emerald-400 font-mono text-sm font-bold">
-                Risk Score = IF(Status = &ldquo;Filed & Verified&rdquo;, 0, Penalty Severity × Urgency Factor)
+              <div className="mt-2 p-4 rounded-sm bg-paper-warm border border-hairline text-ink font-mono text-sm font-semibold">
+                Risk Score = IF(Status = "Filed & Verified", 0, Penalty Severity × Urgency Factor)
               </div>
             </div>
 
@@ -799,42 +873,57 @@ export default function ChecklistEngineWorkbook() {
               
               {/* Urgency Factor Table */}
               <div className="space-y-3">
-                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                <h3 className="text-sm font-serif font-semibold text-ink uppercase tracking-wider">
                   Urgency Factor Lookup Table
                 </h3>
-                <table className="w-full text-left text-xs font-sans border border-slate-200 rounded-lg overflow-hidden">
-                  <thead className="bg-slate-100 font-bold uppercase text-[10px]">
+                <table className="w-full text-left text-sm font-sans border border-hairline rounded-sm overflow-hidden border-collapse">
+                  <thead className="bg-paper-warm font-semibold uppercase border-b border-hairline">
                     <tr>
                       <th className="p-2.5">Condition</th>
                       <th className="p-2.5 text-right">Urgency Factor</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 font-mono">
-                    <tr><td className="p-2.5 font-sans font-semibold text-rose-700">Status = Overdue</td><td className="p-2.5 text-right font-bold">3.0</td></tr>
-                    <tr><td className="p-2.5 font-sans">Days Until Due ≤ 30</td><td className="p-2.5 text-right font-bold">2.0</td></tr>
-                    <tr><td className="p-2.5 font-sans">Days Until Due ≤ 90</td><td className="p-2.5 text-right font-bold">1.5</td></tr>
-                    <tr><td className="p-2.5 font-sans">Days Until Due &gt; 90</td><td className="p-2.5 text-right font-bold">1.0</td></tr>
+                  <tbody className="divide-y divide-hairline-light font-mono">
+                    <tr><td className="p-2.5 font-sans font-semibold text-overdue">Status = Overdue</td><td className="p-2.5 text-right font-semibold">3.0</td></tr>
+                    <tr><td className="p-2.5 font-sans">Days Until Due ≤ 30</td><td className="p-2.5 text-right font-semibold">2.0</td></tr>
+                    <tr><td className="p-2.5 font-sans">Days Until Due ≤ 90</td><td className="p-2.5 text-right font-semibold">1.5</td></tr>
+                    <tr><td className="p-2.5 font-sans">Days Until Due &gt; 90</td><td className="p-2.5 text-right font-semibold">1.0</td></tr>
                   </tbody>
                 </table>
               </div>
 
               {/* Penalty Severity Scale */}
               <div className="space-y-3">
-                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                <h3 className="text-sm font-serif font-semibold text-ink uppercase tracking-wider">
                   Penalty Severity Scale (1 to 5)
                 </h3>
-                <div className="space-y-1.5 text-xs font-mono">
-                  <div className="p-2 rounded bg-slate-50 border border-slate-200"><strong>1 Minor</strong> — small fixed fee, no operational impact</div>
-                  <div className="p-2 rounded bg-slate-50 border border-slate-200"><strong>2 Low</strong> — modest fine</div>
-                  <div className="p-2 rounded bg-slate-50 border border-slate-200"><strong>3 Moderate</strong> — meaningful fine or interest accrual</div>
-                  <div className="p-2 rounded bg-amber-50 border border-amber-200 text-amber-950"><strong>4 High</strong> — large fine, or registration/license at risk</div>
-                  <div className="p-2 rounded bg-rose-50 border border-rose-200 text-rose-950"><strong>5 Severe</strong> — prosecution risk, registration cancellation, or director liability</div>
+                <div className="space-y-1.5 text-sm font-mono">
+                  <div className="p-2 rounded-sm bg-paper border border-hairline text-ink"><strong>1 Minor</strong> — small fixed fee, no operational impact</div>
+                  <div className="p-2 rounded-sm bg-paper border border-hairline text-ink"><strong>2 Low</strong> — modest fine</div>
+                  <div className="p-2 rounded-sm bg-paper border border-hairline text-ink"><strong>3 Moderate</strong> — meaningful fine or interest accrual</div>
+                  <div className="p-2 rounded-sm bg-amber-light border border-amber text-ink"><strong>4 High</strong> — large fine, or registration/license at risk</div>
+                  <div className="p-2 rounded-sm bg-overdue-light border border-overdue text-overdue"><strong>5 Severe</strong> — prosecution risk, registration cancellation, or director liability</div>
                 </div>
               </div>
 
             </div>
 
           </div>
+        </div>
+      )}
+
+      {/* Penalty Calculator Modal Overlay */}
+      {selectedPenaltyItem && (
+        <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4">
+          <PenaltyCalculatorPanel
+            initialFilingType={selectedPenaltyItem.title || 'Form 26Q'}
+            initialDueDate={selectedPenaltyItem.nextDueDate || '2026-06-15'}
+            initialAuthority={selectedPenaltyItem.authority || 'Income Tax Department'}
+            initialCitation={selectedPenaltyItem.citation || 'Income Tax Act Sec 234E'}
+            initialSeverity={selectedPenaltyItem.penaltySeverity || 4}
+            onClose={() => setSelectedPenaltyItem(null)}
+            isModal={true}
+          />
         </div>
       )}
 

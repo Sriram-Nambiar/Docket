@@ -19,7 +19,9 @@ import {
   Database,
   Workflow,
   Cpu,
-  CheckSquare
+  CheckSquare,
+  MessageCircle,
+  ShieldAlert
 } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 
@@ -31,6 +33,8 @@ export default function Sidebar({ activeView, setActiveView }) {
     { id: 'checklist_workbook', label: 'Checklist Engine', icon: CheckSquare },
     { id: 'intake', label: 'Founder Intake', icon: Sparkles },
     { id: 'dashboard', label: 'Compliance Dashboard', icon: LayoutDashboard },
+    { id: 'penalty_calculator', label: 'Risk & Penalty', icon: ShieldAlert },
+    { id: 'whatsapp_settings', label: 'WhatsApp Gateway', icon: MessageCircle },
     { id: 'tasks', label: 'Task Canvas', icon: Share2 },
     { id: 'form_drafting', label: 'Form Drafting', icon: Edit3 },
     { id: 'templates_search', label: 'Templates & Search', icon: Layers },
@@ -44,15 +48,22 @@ export default function Sidebar({ activeView, setActiveView }) {
   ];
 
   return (
-    <aside className="w-56 bg-white border-r border-slate-200/80 flex flex-col justify-between shrink-0 h-screen sticky top-0">
+    <aside className="w-56 bg-paper border-r border-hairline flex flex-col justify-between shrink-0 h-screen sticky top-0">
       
       {/* Logo */}
       <div>
         <div className="px-5 py-5 flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center">
-            <ShieldCheck className="w-4.5 h-4.5 text-indigo-400" />
+          <div className="w-8 h-8 rounded-sm bg-ink flex items-center justify-center">
+            <ShieldCheck className="w-4.5 h-4.5 text-white" />
           </div>
-          <span className="font-bold text-sm text-slate-900 tracking-tight">Docket</span>
+          <span className="font-serif font-semibold text-ink tracking-tight">DOCKET</span>
+        </div>
+        
+        {/* Tier Indicator */}
+        <div className="px-5 pb-3">
+          <span className={isComplianceHead ? "tier-badge-active" : "tier-badge"}>
+            {isComplianceHead ? 'TIER 2 — COMPLIANCE HEAD' : 'TIER 1 — FOUNDER'}
+          </span>
         </div>
 
         {/* Nav */}
@@ -64,13 +75,13 @@ export default function Sidebar({ activeView, setActiveView }) {
               <button
                 key={item.id}
                 onClick={() => setActiveView?.(item.id)}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors cursor-pointer ${
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-sm text-sm font-medium transition-colors cursor-pointer ${
                   isActive
-                    ? 'bg-slate-900 text-white'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    ? 'border-l-2 border-amber bg-amber-light text-ink'
+                    : 'border-l-2 border-transparent text-muted hover:text-ink hover:bg-paper-warm'
                 }`}
               >
-                <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-slate-400' : 'text-slate-400'}`} />
+                <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-amber' : 'text-muted'}`} />
                 <span>{item.label}</span>
               </button>
             );
@@ -79,21 +90,21 @@ export default function Sidebar({ activeView, setActiveView }) {
       </div>
 
       {/* User footer */}
-      <div className="p-3 border-t border-slate-100">
+      <div className="p-3 border-t border-hairline">
         <div className="flex items-center justify-between gap-2 px-2 py-2">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className={`w-7 h-7 rounded-full text-white flex items-center justify-center text-[10px] font-bold shrink-0 ${
-              isComplianceHead ? 'bg-slate-700' : 'bg-indigo-600'
+            <div className={`w-7 h-7 rounded-full text-white flex items-center justify-center text-xs font-bold shrink-0 ${
+              isComplianceHead ? 'bg-ink' : 'bg-amber'
             }`}>
               {user?.avatar || 'U'}
             </div>
             <div className="min-w-0">
-              <span className="text-xs font-semibold text-slate-900 block truncate">{user?.name || 'Guest'}</span>
-              <span className="text-[10px] text-slate-400 block truncate">{isComplianceHead ? 'Admin' : 'User'}</span>
+              <span className="text-sm font-semibold text-ink block truncate">{user?.name || 'Guest'}</span>
+              <span className="font-mono text-xs text-muted block truncate">{isComplianceHead ? 'Admin' : 'User'}</span>
             </div>
           </div>
           {user && (
-            <button onClick={logout} title="Sign out" className="p-1.5 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600 cursor-pointer">
+            <button onClick={logout} title="Sign out" className="p-1.5 rounded-sm hover:bg-paper-warm text-muted hover:text-ink cursor-pointer">
               <LogOut className="w-3.5 h-3.5" />
             </button>
           )}

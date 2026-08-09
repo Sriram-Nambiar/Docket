@@ -7,7 +7,7 @@ import TasksView from '../../components/TasksView';
 
 export default function TasksPage() {
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex min-h-screen bg-paper">
       <Sidebar activeView="tasks" />
       <div className="flex-1 flex flex-col min-w-0">
         <HeaderNav activeView="tasks" />

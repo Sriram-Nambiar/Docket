@@ -3,14 +3,26 @@ logs
 *.log
 npm-debug.log*
 yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
 
+# Dependencies
 node_modules
+.pnpm-store
+
+# Next.js & Build outputs
+.next
 dist
 dist-ssr
+
+# Environment files
+.env.local
+.env*.local
 *.local
+
+# Temporary / Scratch scripts
+components/rewrite.py
+components/update.py
+test_login.json
+smoke_test.mjs
 
 # Editor directories and files
 .vscode/*

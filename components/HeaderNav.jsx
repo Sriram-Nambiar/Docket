@@ -16,6 +16,8 @@ export default function HeaderNav({ activeView, setActiveView, onOpenNewProjectM
     checklist_workbook: 'Checklist Engine',
     intake: 'Founder Intake',
     dashboard: 'Compliance Dashboard',
+    penalty_calculator: 'Risk & Penalty Calculator',
+    whatsapp_settings: 'WhatsApp Reminder Gateway',
     tasks: 'Task Canvas',
     form_drafting: 'Form Drafting',
     templates_search: 'Templates & Search',
@@ -30,10 +32,10 @@ export default function HeaderNav({ activeView, setActiveView, onOpenNewProjectM
 
   return (
     <>
-      <header className="bg-white border-b border-slate-200/80 sticky top-0 z-30 px-6 h-14 flex items-center justify-between">
+      <header className="bg-paper border-b border-hairline sticky top-0 z-30 px-6 h-14 flex items-center justify-between">
         
         {/* Left: Page title */}
-        <h1 className="text-sm font-semibold text-slate-900">
+        <h1 className="font-serif text-base font-semibold text-ink">
           {viewTitles[activeView] || 'Dashboard'}
         </h1>
 
@@ -43,30 +45,30 @@ export default function HeaderNav({ activeView, setActiveView, onOpenNewProjectM
           {/* Notifications */}
           <button
             onClick={() => setIsNotificationModalOpen(true)}
-            className="relative p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors cursor-pointer"
+            className="relative p-2 rounded-sm hover:bg-paper-warm text-muted hover:text-ink transition-colors cursor-pointer"
             title="Notifications"
           >
             <Bell className="w-4 h-4" />
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 absolute top-2 right-2" />
+            <span className="w-1.5 h-1.5 rounded-full bg-amber absolute top-2 right-2" />
           </button>
 
           {/* Auth */}
           {isAuthenticated ? (
             <button
               onClick={() => setIsAuthModalOpen(true)}
-              className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+              className="flex items-center gap-2 px-2.5 py-1.5 rounded-sm hover:bg-paper-warm transition-colors cursor-pointer"
             >
               <div className={`w-6 h-6 rounded-full font-bold flex items-center justify-center text-[10px] text-white ${
-                user?.role === 'compliance_head' ? 'bg-slate-700' : 'bg-indigo-600'
+                user?.role === 'compliance_head' ? 'bg-ink' : 'bg-amber'
               }`}>
                 {user?.avatar || 'U'}
               </div>
-              <span className="text-xs font-medium text-slate-700 hidden sm:block">{user?.name}</span>
+              <span className="text-xs font-medium text-ink hidden sm:block">{user?.name}</span>
             </button>
           ) : (
             <button
               onClick={() => setIsAuthModalOpen(true)}
-              className="px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-medium cursor-pointer"
+              className="btn-ink px-3 py-1.5 rounded-sm text-white text-sm font-medium cursor-pointer"
             >
               Sign In
             </button>
@@ -75,7 +77,7 @@ export default function HeaderNav({ activeView, setActiveView, onOpenNewProjectM
           {/* New Project */}
           <button
             onClick={onOpenNewProjectModal}
-            className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+            className="px-3 py-1.5 rounded-sm bg-amber hover:bg-amber-hover text-white text-sm font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">New Project</span>
