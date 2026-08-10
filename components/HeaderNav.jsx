@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Bell, Plus } from 'lucide-react';
+import { Bell, Plus, Building2, ChevronDown, RefreshCw } from 'lucide-react';
 import NotificationCenterModal from './NotificationCenterModal';
 import AuthModal from './AuthModal';
 import { useAuth } from '../lib/AuthContext';
+import { useCompany } from '../lib/CompanyContext';
 import { workspaceNavigation } from './Sidebar';
 
 const viewTitles = {
@@ -15,10 +16,11 @@ const viewTitles = {
   orchestration: 'Automation', rules: 'Rule library', settings: 'Settings',
 };
 
-export default function HeaderNav({ activeView, setActiveView, workspaceName, onOpenNewProjectModal }) {
+export default function HeaderNav({ activeView, setActiveView, onOpenNewProjectModal }) {
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const { user, isAuthenticated } = useAuth();
+  const { companies, activeCompany, activeCompanyId, changeActiveCompany } = useCompany();
 
   return (
     <>
@@ -28,15 +30,42 @@ export default function HeaderNav({ activeView, setActiveView, workspaceName, on
             aria-label="Choose workspace view"
             value={activeView}
             onChange={(event) => setActiveView?.(event.target.value)}
-            className="lg:hidden ledger-input w-40 py-1.5 text-sm font-semibold"
+            className="lg:hidden ledger-input w-36 py-1 text-xs font-semibold"
           >
             {workspaceNavigation.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
           </select>
+          
           <div className="hidden lg:block">
-            <p className="label-caps leading-none mb-1">Workspace</p>
+            <p className="label-caps leading-none mb-1 text-[10px]">Workspace View</p>
             <h1 className="font-serif text-base font-semibold text-ink leading-none">{viewTitles[activeView] || 'Overview'}</h1>
           </div>
-          {workspaceName && <span className="hidden xl:block text-xs text-muted border-l border-hairline pl-3 truncate max-w-52">{workspaceName}</span>}
+
+          {/* Interactive Company Switcher Dropdown */}
+          <div className="flex items-center gap-2 border-l border-hairline pl-3">
+            <div className="relative flex items-center">
+              <Building2 className="w-3.5 h-3.5 text-amber absolute left-2 pointer-events-none" />
+              <select
+                aria-label="Select company workspace"
+                value={activeCompanyId}
+                onChange={(e) => changeActiveCompany(e.target.value)}
+                className="bg-paper-warm border border-hairline hover:border-amber rounded-sm pl-7 pr-7 py-1 text-xs font-bold text-ink cursor-pointer focus:outline-none focus:ring-1 focus:ring-amber appearance-none max-w-56 truncate"
+              >
+                {companies.map((comp) => (
+                  <option key={comp.id} value={comp.id}>
+                    {comp.name} ({comp.score}% Score)
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="w-3 h-3 text-muted absolute right-2 pointer-events-none" />
+            </div>
+
+            {activeCompany?.isAutomating && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber/20 text-amber font-mono text-[10px] font-bold animate-pulse">
+                <RefreshCw className="w-3 h-3 animate-spin" />
+                Real-time Syncing
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">

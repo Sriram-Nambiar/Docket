@@ -57,6 +57,15 @@ export default function WhatsAppReminderSettings() {
       })
     }).catch(err => console.warn(err));
 
+    // Send message to WhatsApp clone via shared API
+    fetch('/api/whatsapp/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: `🚨 *DOCKET COMPLIANCE ALERT*\n📋 *Apex Technologies Pvt Ltd* (CIN: U72900MH2024PTC412345)\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n📌 *Upcoming Deadlines — Next 30 Days:*\n\n1️⃣ *EPF Monthly ECR Filing & Deposit*\n   📅 Due: Aug 15, 2026 (5 days left)\n   🏛 Authority: EPFO\n   ⚠️ Penalty: ₹50/day + 12% interest\n\n2️⃣ *GSTR-3B Monthly Summary Return*\n   📅 Due: Aug 20, 2026 (10 days left)\n   🏛 Authority: CBIC / GSTN\n   ⚠️ Penalty: ₹50/day (max ₹5,000)\n\n3️⃣ *GSTR-1 Outward Supply Return*\n   📅 Due: Aug 11, 2026 (1 day left) ❗\n   🏛 Authority: CBIC / GSTN\n   ⚠️ Penalty: ₹50/day\n\n4️⃣ *Form DIR-3 KYC Verification*\n   📅 Due: Sep 30, 2026 (51 days left)\n   🏛 Authority: MCA\n   🔴 Status: AT RISK — Director OTP Pending\n   ⚠️ Penalty: ₹5,000 + DIN Deactivation\n\n5️⃣ *Board Meeting Minutes Filing*\n   📅 Due: Aug 30, 2026 (20 days left)\n   🏛 Authority: MCA\n   ⚠️ Penalty: ₹25,000 on company\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n📊 *Summary:* 5 obligations due in 30 days\n🎯 *Compliance Score:* 78% (High Readiness)\n🔴 *Critical:* 1 item AT RISK (DIR-3 KYC)\n\n💡 _Reply DETAILS for full breakdown_\n💡 _Reply SNOOZE to pause alerts for 24h_\n\n— Docket AI Compliance Platform 🛡️`
+      })
+    }).catch(err => console.warn('WhatsApp relay:', err));
+
     setTestSent(true);
     setTimeout(() => setTestSent(false), 4000);
   };

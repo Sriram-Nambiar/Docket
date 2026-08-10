@@ -1,5 +1,6 @@
 import './globals.css';
 import { AuthProvider } from '../lib/AuthContext';
+import { CompanyProvider } from '../lib/CompanyContext';
 
 export const metadata = {
   title: 'Docket — AI-Powered Regulatory Platform',
@@ -20,7 +21,9 @@ export default function RootLayout({ children }) {
       </head>
       <body className="bg-paper text-ink antialiased min-h-screen" style={{ fontFamily: "'Manrope', 'Segoe UI', system-ui, sans-serif" }}>
         <AuthProvider>
-          {children}
+          <CompanyProvider>
+            {children}
+          </CompanyProvider>
         </AuthProvider>
       </body>
     </html>
