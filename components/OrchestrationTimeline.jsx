@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Workflow, Play, RotateCcw, CheckCircle2, AlertCircle, Loader2, Terminal, Clock, Hash, Cpu, Brain, ShieldCheck, FileText, Calculator, ChevronDown, ChevronUp } from 'lucide-react';
+import { Workflow, Play, RotateCcw, CheckCircle2, AlertCircle, Loader2, Terminal, Clock, Hash, Cpu, Brain, ShieldCheck, FileText, Calculator, ChevronDown, ChevronUp, Building2 } from 'lucide-react';
+import { useCompany } from '../lib/CompanyContext';
 
 const initialAgents = [
   { step: 1, name: 'Intake Advisor Agent', description: 'Evaluates business structure via NVIDIA NIM AI', status: 'pending', messages: [], output: null, duration: null, summary: null, error: null },
@@ -12,7 +13,8 @@ const initialAgents = [
 ];
 
 export default function OrchestrationTimeline() {
-  const [inputText, setInputText] = useState('SaaS Private Limited Company in Bengaluru, ₹50L annual turnover, 10 employees, 2 co-founders');
+  const { companies, activeCompany, activeCompanyId, changeActiveCompany, addAuditLog } = useCompany();
+  const [inputText, setInputText] = useState(`${activeCompany.name} - ${activeCompany.sector}, ${activeCompany.annualTurnover} turnover, ${activeCompany.employeeCount} employees`);
   const [isRunning, setIsRunning] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [agents, setAgents] = useState(initialAgents);
@@ -24,6 +26,10 @@ export default function OrchestrationTimeline() {
 
   const terminalRef = useRef(null);
   const abortControllerRef = useRef(null);
+
+  useEffect(() => {
+    setInputText(`${activeCompany.name} - ${activeCompany.sector}, ${activeCompany.annualTurnover} turnover, ${activeCompany.employeeCount} employees`);
+  }, [activeCompanyId, activeCompany.name, activeCompany.sector, activeCompany.annualTurnover, activeCompany.employeeCount]);
 
   useEffect(() => {
     let interval;

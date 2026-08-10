@@ -2,8 +2,10 @@
 
 import React, { useState } from 'react';
 import { Building2, CheckCircle2, ShieldCheck, X } from 'lucide-react';
+import { useCompany } from '../lib/CompanyContext';
 
 export default function NewProjectModal({ isOpen, onClose, onCreate }) {
+  const { addCompany } = useCompany();
   const [projectName, setProjectName] = useState('');
   const [template, setTemplate] = useState('Pvt Ltd');
   const [isCreated, setIsCreated] = useState(false);
@@ -17,7 +19,13 @@ export default function NewProjectModal({ isOpen, onClose, onCreate }) {
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    const project = { name: projectName.trim(), template, createdAt: new Date().toISOString() };
+    const newCompany = addCompany({
+      name: projectName.trim(),
+      entityType: template === 'LLP' ? 'LLP' : 'Private Limited Company',
+      sector: template === 'Startup' ? 'Technology / SaaS' : template === 'Hospital' ? 'Healthcare' : 'General Business'
+    });
+
+    const project = { name: newCompany.name, template, createdAt: new Date().toISOString() };
     const existing = JSON.parse(window.localStorage.getItem('docket_projects') || '[]');
     window.localStorage.setItem('docket_projects', JSON.stringify([project, ...existing.filter((item) => item.name !== project.name)]));
     onCreate?.(project);
