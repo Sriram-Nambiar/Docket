@@ -287,6 +287,18 @@ Status: Ready for GSTR-3B Table 4 Auto-Population`
     }
   };
 
+  // Map file names to their actual PDF URLs in /public/documents/
+  const pdfUrlMap = {
+    "Audited_Balance_Sheet_2025_26.pdf": "/documents/Audited_Balance_Sheet_2025_26.pdf",
+    "Board_Resolution_AOC4.pdf": "/documents/Board_Resolution_AOC4.pdf",
+    "Director_PAN_Card.pdf": "/documents/Director_PAN_Card.pdf",
+    "Passport_Scan_Director2.pdf": "/documents/Passport_Scan_Director2.pdf",
+    "Shareholders_Register_2026.pdf": "/documents/Shareholders_Register_2026.pdf",
+    "Board_Minutes_Master.pdf": "/documents/Board_Minutes_Master.pdf",
+    "GSTR1_July2026_Extracted.pdf": "/documents/GSTR1_July2026_Extracted.pdf",
+    "Purchase_Register_July.xlsx": "/documents/Purchase_Register_July.pdf",
+  };
+
   const currentForm = formDataMock[selectedForm];
 
   const handleApprove = (formId) => {
@@ -310,7 +322,7 @@ Status: Ready for GSTR-3B Table 4 Auto-Population`
       ],
       pdfTextSnippet: `[STATUTORY COMPLIANCE DOCUMENT]\nDocument File: ${fileName}\nStatus: Verified via Docket VLM OCR Pipeline.`
     };
-    setActivePdfModal(docData);
+    setActivePdfModal({ ...docData, pdfUrl: pdfUrlMap[fileName] || null });
   };
 
   return (
@@ -470,7 +482,7 @@ Status: Ready for GSTR-3B Table 4 Auto-Population`
       {/* Interactive PDF Document Viewer Modal */}
       {activePdfModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-slate-900 border border-slate-700 text-slate-100 w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-slate-900 border border-slate-700 text-slate-100 w-full max-w-5xl rounded-2xl shadow-2xl overflow-hidden" style={{ animation: 'fadeIn 0.2s ease-out' }}>
             
             {/* Modal Header Bar */}
             <div className="p-4 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
@@ -490,13 +502,28 @@ Status: Ready for GSTR-3B Table 4 Auto-Population`
               </div>
 
               <div className="flex items-center gap-2">
-                <button 
-                  onClick={() => alert(`Downloading ${activePdfModal.fileName}...`)}
-                  className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
-                  title="Download File"
-                >
-                  <Download className="w-4 h-4" />
-                </button>
+                {activePdfModal.pdfUrl && (
+                  <a
+                    href={activePdfModal.pdfUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-colors cursor-pointer flex items-center gap-1 text-xs font-bold px-3"
+                    title="Open PDF in New Tab"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    Open in New Tab
+                  </a>
+                )}
+                {activePdfModal.pdfUrl && (
+                  <a
+                    href={activePdfModal.pdfUrl}
+                    download={activePdfModal.fileName}
+                    className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                    title="Download PDF"
+                  >
+                    <Download className="w-4 h-4" />
+                  </a>
+                )}
                 <button 
                   onClick={() => setActivePdfModal(null)}
                   className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
@@ -549,14 +576,32 @@ Status: Ready for GSTR-3B Table 4 Auto-Population`
                 </div>
               </div>
 
-              {/* Document Paper Preview Box */}
+              {/* Embedded Real PDF Viewer */}
+              {activePdfModal.pdfUrl && (
+                <div className="space-y-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                    <Eye className="w-4 h-4 text-emerald-400" />
+                    Document Preview — Embedded PDF Viewer
+                  </span>
+                  <div className="rounded-xl overflow-hidden border border-slate-700 bg-white">
+                    <iframe
+                      src={activePdfModal.pdfUrl}
+                      className="w-full border-0"
+                      style={{ height: '500px' }}
+                      title={`PDF Preview: ${activePdfModal.fileName}`}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* OCR Text Content Extract (shown below the PDF) */}
               <div className="space-y-2">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                  <Eye className="w-4 h-4 text-emerald-400" />
-                  OCR Text Content Extract & Seal Lineage
+                  <FileSearch className="w-4 h-4 text-indigo-400" />
+                  VLM OCR Extracted Text & Seal Lineage
                 </span>
 
-                <div className="p-5 rounded-xl bg-slate-950 border border-slate-800 font-mono text-xs text-slate-300 space-y-3 relative overflow-hidden">
+                <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 font-mono text-xs text-slate-300 space-y-3 relative overflow-hidden">
                   <div className="flex items-center justify-between border-b border-slate-800 pb-2">
                     <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">
                       ★ Official Government / Statutory Document Record
